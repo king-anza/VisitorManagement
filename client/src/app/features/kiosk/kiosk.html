@@ -1,0 +1,51 @@
+<main class="kiosk">
+  <header (pointerdown)="activity()" (keydown)="activity()">
+    <div class="brand"><span class="brand-icon">w.</span> {{config()?.organisationName||t('welcome')}}<span class="brand-dot">.</span></div>
+    <div class="kiosk-tools"><span>{{config()?.siteName}}</span><label>{{t('language')}} <select data-testid="language" [value]="i18n.language()" (change)="changeLanguage($event)" aria-label="Language"><option value="en">English</option><option value="af">Afrikaans</option><option value="zu">isiZulu</option></select></label></div>
+  </header>
+  @if(!online()||!serverReachable()){<div class="kiosk-connection" role="alert"><strong>{{t(online()?'serverUnavailable':'offline')}}</strong><span>{{t('connectionHelp')}}</span><button type="button" class="button secondary" (click)="loadConfig()">{{t('retry')}}</button></div>}
+  @if(secondsRemaining()<=15){<div class="kiosk-timeout" role="status">{{t('clearWarning',{seconds:secondsRemaining()})}}</div>}
+
+  @if(ticket();as item){
+    <section class="ticket-card" aria-live="polite" (pointerdown)="activity()">
+      <div class="success">✓</div><p>{{t('inQueue')}}</p><h1>{{item.ticketNumber}}</h1><strong>{{t('keepNumber')}}</strong>
+      <p>{{t('estimatedWait',{minutes:item.estimatedWaitMinutes,unit:t(item.estimatedWaitMinutes===1?'minute':'minutes')})}}</p>
+      @if(item.trackingToken){<p><a [href]="trackingHref(item)">{{t('track')}}</a></p>}
+      @if(item.consentReceiptId){<p><a [href]="'/api/kiosk/consent/'+item.consentReceiptId" target="_blank">{{t('consentReceipt')}}</a></p>}
+      <p>{{t('publicPrivacy')}}</p><button class="button primary" (click)="reset()">{{t('finish')}}</button>
+    </section>
+  } @else {
+    <form class="kiosk-card" [formGroup]="form" (ngSubmit)="submit()" (input)="activity()" (pointerdown)="activity()">
+      <div class="eyebrow">{{t('selfService')}}</div><h1>{{t('howHelp')}}</h1><p>{{t('instructions')}}</p>
+      <label>{{t('service')}} *
+        <select formControlName="serviceId"><option value="">{{t('chooseService')}}</option>
+          @for(service of config()?.services||[];track service.id){<option [value]="service.id" [disabled]="!service.acceptingTickets||service.waiting>=service.maxWaiting">{{service.name}} · {{!service.acceptingTickets?(service.pausedReason||t('paused')):(service.waiting>=service.maxWaiting?t('full'):t('aboutMinutes',{minutes:service.estimatedMinutes}))}}</option>}
+        </select>
+      </label>
+      <label>{{t('fullName')}} *<input formControlName="name" autocomplete="name"></label>
+      <label>{{t('mobile')}}<input formControlName="phone" type="tel" autocomplete="tel"></label>
+      @if(config()?.notificationAvailable){<label class="check-label"><input formControlName="notificationConsent" type="checkbox"> {{t('mobileUpdates')}} <small>{{t('mobileHelp')}}</small></label>}
+      <label>{{t('idScanner')}}<input formControlName="identification" autocomplete="off" (keydown)="scanned($event)" (paste)="pasted($event)" [placeholder]="t('idPlaceholder')"><small>{{t('idHelp')}}</small></label>
+      @if(barcode.supported()){<button type="button" class="button secondary scan-code" (click)="openCodeScanner()">{{t('scanCamera')}}</button>}@else{<small>{{t('scanUnavailable')}}</small>}
+      @if(scannerReady()){<p class="device-ok">✓ {{t('codeRead')}}{{scannedFormat()?' · '+scannedFormat():''}}</p>}
+      <label class="check-label"><input formControlName="priority" type="checkbox"> {{t('priority')}}</label>
+      <details><summary>{{t('optionalCamera')}}</summary><p>{{config()?.biometricNotice}}</p>
+        <label class="check-label"><input formControlName="biometricConsent" type="checkbox"> {{t('cameraConsent')}}</label>
+        <div class="camera"><video #video playsinline muted></video>@if(photo()){<img [src]="photo()" [alt]="t('capturedPhoto')">}<div class="row-actions"><button type="button" class="button secondary" (click)="startCamera()">{{t('startCamera')}}</button><button type="button" class="button secondary" [disabled]="!camera.active()" (click)="takePhoto()">{{t('capture')}}</button>@if(config()?.biometricAvailable){<button type="button" class="button secondary" [disabled]="!photo()||busy()" (click)="verifyBiometric()">{{t('verify')}}</button>}</div></div>
+        @if(biometricVerified()){<p class="device-ok" role="status">✓ {{t('verified')}}</p>}
+        @if(config()?.biometricAvailable){<small>{{t('providerHelp')}}</small>} @else {<small>{{t('manualHelp')}}</small>}
+      </details>
+      <p class="privacy-notice">{{config()?.privacyNotice}}</p>
+      @if(form.touched&&form.invalid){<p class="form-error">{{t('validation')}}</p>}
+      @if(error()||camera.error()){<p class="form-error" role="alert">{{error()||camera.error()}}</p>}
+      @if(config()&&!available()){<p class="form-error" role="status">{{t('noneAvailable')}}</p>}
+      <button class="button primary kiosk-submit" type="submit" [disabled]="busy()||!available()">{{t(busy()?'joining':'join')}}</button>
+    </form>
+  }
+  <dialog #scanDialog class="scan-dialog" (cancel)="closeCodeScanner();$event.preventDefault()">
+    <div class="dialog-heading"><div><div class="eyebrow">{{t('cameraScanner')}}</div><h2>{{t('holdCode')}}</h2></div><button type="button" class="close" [attr.aria-label]="t('closeScanner')" (click)="closeCodeScanner()">×</button></div>
+    <video #scanVideo playsinline muted [attr.aria-label]="t('liveCamera')"></video><p>{{t('supported',{formats:barcode.formats().join(', ')||t('checking')})}}</p>
+    @if(barcode.error()){<p class="form-error" role="alert">{{barcode.error()}}</p>}
+    <div class="dialog-footer"><span>{{t('noImageStored')}}</span><button type="button" class="button secondary" (click)="closeCodeScanner()">{{t('cancel')}}</button></div>
+  </dialog>
+</main>

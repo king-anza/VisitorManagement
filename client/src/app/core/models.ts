@@ -1,0 +1,28 @@
+export type UserRole = 'admin' | 'receptionist' | 'host' | 'security';
+export interface WorkspaceUser { id:string; name:string; username:string; role:UserRole; employeeId:string|null; active:boolean; version:number; createdAt:string; }
+export interface PublicSettings { organisationName:string; siteName:string; privacyNotice:string; biometricNotice?:string; categories:string[]; requiredFields:string[]; capacityLimit:number; retentionDays?:number; queueRetentionDays?:number; kioskTimeoutSeconds?:number; }
+export interface SessionResponse { setupRequired:boolean; user:WorkspaceUser|null; csrf:string|null; settings:PublicSettings; }
+export interface Visitor { id:string; profileId:string|null; appointmentId:string|null; name:string; company:string; email?:string; phone?:string; hostId:string; host:string; department:string; purpose:string; category:string; vehicle:string; destination:string; expectedDeparture:string|null; badgeCode:string|null; escortRequired:number; escortName:string; inductionAcceptedAt:string|null; assistanceNotes?:string; notes?:string; checkedIn:string; checkedOut:string|null; anonymizedAt:string|null; version:number; }
+export interface Employee { id:string; name:string; email:string; phone:string; department:string; location:string; active:number; version:number; }
+export interface Page<T> { items:T[]; total:number; page:number; pageSize:number; }
+export interface VisitorStats { today:number; inside:number; departed:number; average:number|null; }
+export interface VisitorFilters { company:string[]; department:string[]; purpose:string[]; }
+export type VisitorStatus = 'all'|'inside'|'out';
+export type VisitorSort = 'newest'|'oldest'|'name'|'host'|'checkout'|'duration';
+export interface VisitorQuery { view:'dashboard'|'history'; status:VisitorStatus; page:number; sort:VisitorSort; q?:string; from?:string; to?:string; hostId?:string; company?:string; department?:string; purpose?:string; }
+export interface VisitorProfile { id:string; name:string; company:string; email:string; phone:string; visitCount:number; lastVisitAt:string; version:number; }
+export interface Appointment extends Omit<Visitor,'id'|'appointmentId'|'checkedIn'|'checkedOut'|'anonymizedAt'|'expectedDeparture'|'badgeCode'> { id:string; scheduledFor:string; expectedEnd:string|null; status:'expected'|'arrived'|'cancelled'|'no_show'; visitorId:string|null; createdAt:string; updatedAt:string; }
+export interface EmergencyVisitor { emergencyId:string; visitorId:string; visitorName:string; host:string; destination:string; assistanceNotes:string; status:'unaccounted'|'accounted'|'left'; accountedAt:string|null; accountedBy:string|null; notes:string; }
+export interface Emergency { id:string; name:string; status:'active'|'closed'; startedAt:string; startedBy:string; endedAt:string|null; visitors:EmergencyVisitor[]; }
+export interface AuditEntry { id:string; at:string; actorId:string|null; actorName:string; action:string; entityId:string; details:Record<string,unknown>; }
+export interface Backup { name:string; createdAt:string; bytes:number; }
+export interface RetentionPreview { cutoff:string; queueCutoff?:string; visits:number; profiles:number; queueTickets?:number; queueRetentionDays?:number; }
+export interface QueueService { id:string; name:string; description:string; prefix:string; active:number|boolean; acceptingTickets:number|boolean; pausedReason:string; maxWaiting:number; slaMinutes:number; estimatedMinutes:number; priorityEnabled:number|boolean; version:number; createdAt:string; updatedAt:string; }
+export type QueueStatus='waiting'|'called'|'serving'|'completed'|'cancelled'|'no_show';
+export interface QueueTicket { id:string; ticketNumber:string; serviceId:string; serviceName?:string; name:string; phone:string; source:'kiosk'|'remote'|'staff'; identificationLast4:string; verificationMethod:'manual'|'card'|'camera'|'biometric'; biometricConsentAt:string|null; photoConsentAt:string|null; notificationConsentAt?:string|null; consentReceiptId?:string|null; trackingToken?:string; estimatedWaitMinutes:number; slaBreached?:number; anonymizedAt?:string|null; status:QueueStatus; priority:number; checkedInAt:string; calledAt:string|null; serviceStartedAt:string|null; completedAt:string|null; assignedUserId:string|null; desk:string; version:number; estimatedMinutes?:number; }
+export interface QueueTracking { id:string; ticketNumber:string; service:string; status:QueueStatus; desk:string; position:number; estimatedWaitMinutes:number; checkedInAt:string; calledAt:string|null; completedAt:string|null; }
+export interface QueueStat { id:string; name:string; waiting:number; serving:number; breached:number; completed:number; noShow:number; averageWaitMinutes:number|null; averageServiceMinutes:number|null; }
+export interface QueueOutcomeSummary { total:number; kiosk:number; remote:number; completed:number; cancelled:number; noShow:number; abandoned:number; terminal:number; abandonmentRate:number|null; }
+export interface QueueReport { from:string; to:string; summary:QueueOutcomeSummary; services:Array<QueueStat&QueueOutcomeSummary>; daily:Array<{day:string}&QueueOutcomeSummary>; }
+export interface KioskConfig { organisationName:string; siteName:string; privacyNotice:string; biometricNotice:string; biometricAvailable:boolean; notificationAvailable:boolean; kioskTimeoutSeconds:number; services:Array<Pick<QueueService,'id'|'name'|'description'|'estimatedMinutes'|'priorityEnabled'|'acceptingTickets'|'pausedReason'|'maxWaiting'>&{waiting:number}>; }
+export interface QueueNotificationStatus { configured:boolean; pending:number; sent:number; failed:number; }

@@ -1,0 +1,21 @@
+<main class="remote-page">
+  <header><div class="brand"><span class="brand-icon">w.</span> {{config()?.organisationName||t('welcome')}}<span class="brand-dot">.</span></div><div class="remote-tools"><span>{{config()?.siteName}}</span><label>{{t('language')}} <select data-testid="remote-language" [value]="i18n.language()" (change)="changeLanguage($event)" aria-label="Language"><option value="en">English</option><option value="af">Afrikaans</option><option value="zu">isiZulu</option></select></label></div></header>
+  @if(ticket();as item){
+    <section class="remote-card ticket-card" aria-live="polite"><div class="success">âœ“</div><p>{{t('remoteSuccess')}}</p><h1>{{item.ticketNumber}}</h1><strong>{{t('keepNumber')}}</strong><p>{{t('estimatedWait',{minutes:item.estimatedWaitMinutes,unit:t(item.estimatedWaitMinutes===1?'minute':'minutes')})}}</p><p>{{t('remoteTrackHelp')}}</p><a class="button primary" [href]="trackingHref(item)">{{t('openTracking')}}</a><button class="button secondary" type="button" (click)="reset()">{{t('remoteAnother')}}</button><small>{{t('publicPrivacy')}}</small></section>
+  } @else {
+    <form class="remote-card" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="eyebrow">{{t('remoteQueue')}}</div><h1>{{t('remoteTitle')}}</h1><p>{{t('remoteIntro')}}</p><aside role="note">{{t('remoteNotice')}}</aside>
+      <label>{{t('service')}} *<select formControlName="serviceId"><option value="">{{t('chooseService')}}</option>@for(service of config()?.services||[];track service.id){<option [value]="service.id" [disabled]="!service.acceptingTickets||service.waiting>=service.maxWaiting">{{service.name}} Â· {{!service.acceptingTickets?(service.pausedReason||t('paused')):(service.waiting>=service.maxWaiting?t('full'):t('aboutMinutes',{minutes:service.estimatedMinutes}))}}</option>}</select></label>
+      <label>{{t('fullName')}} *<input formControlName="name" autocomplete="name"></label>
+      <label>{{t('mobile')}} *<input formControlName="phone" type="tel" autocomplete="tel"><small>{{t('remotePhoneHelp')}}</small></label>
+      @if(config()?.notificationAvailable){<label class="check-label"><input formControlName="notificationConsent" type="checkbox"> {{t('mobileUpdates')}}<small>{{t('mobileHelp')}}</small></label>}
+      <label class="check-label"><input formControlName="priority" type="checkbox"> {{t('priority')}}</label>
+      <label class="check-label arrival"><input formControlName="arrivalConfirmed" type="checkbox"> {{t('arrivalConfirm')}} *</label>
+      <p class="privacy-notice">{{config()?.privacyNotice}}</p>
+      @if(form.touched&&form.invalid){<p class="form-error" role="alert">{{t('remoteValidation')}}</p>}
+      @if(error()){<p class="form-error" role="alert">{{error()}}</p>}
+      @if(config()&&!available()){<p class="form-error" role="status">{{t('noneAvailable')}}</p>}
+      <button class="button primary" type="submit" [disabled]="busy()||!available()">{{t(busy()?'joining':'join')}}</button>
+    </form>
+  }
+</main>

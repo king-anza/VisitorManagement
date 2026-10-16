@@ -1,0 +1,11 @@
+<section id="auth-screen" class="auth-screen"><form id="auth-form" class="auth-card" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <div class="brand"><span class="brand-icon">w.</span> {{ settings()?.organisationName || 'Welcome' }}<span class="brand-dot">.</span></div>
+  <div class="eyebrow">YOUR FRONT DESK, SIMPLIFIED</div><h1 id="auth-title">{{ title() }}</h1><p>{{ description() }}</p>
+  @if (setup()) { <label>Your name<input name="name" formControlName="name" maxlength="120" autocomplete="name"></label> }
+  <label>Username<input name="username" formControlName="username" maxlength="120" autocomplete="username"></label>
+  @if (form.controls.username.touched && form.controls.username.invalid) { <small class="form-error">Enter a username of at least 3 characters.</small> }
+  <label>Password<input name="password" formControlName="password" type="password" maxlength="128" [autocomplete]="setup() ? 'new-password' : 'current-password'"></label>
+  @if (setup()) { <p>Choose a password of at least 12 characters. This will be your administrator account.</p> }
+  @if (form.controls.password.touched && form.controls.password.invalid) { <small class="form-error">{{ setup() ? 'Use at least 12 characters.' : 'Enter your password.' }}</small> }
+  <p class="form-error" role="alert">{{ error() }}</p><button type="submit" class="button primary" [disabled]="busy()">{{ busy() ? 'Please wait…' : setup() ? 'Create administrator' : 'Sign in' }}</button>
+</form></section><div id="application" hidden></div>

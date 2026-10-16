@@ -1,0 +1,1 @@
+.native-application{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}.nav-item{display:flex;text-decoration:none}@media(max-width:800px){.native-application{grid-template-columns:72px minmax(0,1fr)}}

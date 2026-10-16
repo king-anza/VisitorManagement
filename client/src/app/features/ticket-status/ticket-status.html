@@ -1,0 +1,19 @@
+<main class="tracking">
+  <header>
+    <a [href]="'/kiosk?lang='+i18n.language()" class="brand"><span class="brand-icon">w.</span> queue.</a>
+    <div class="tracking-tools"><span>{{t('privateTracking')}}</span><label>{{t('language')}} <select [value]="i18n.language()" (change)="changeLanguage($event)" aria-label="Language"><option value="en">English</option><option value="af">Afrikaans</option><option value="zu">isiZulu</option></select></label></div>
+  </header>
+  @if(error()){<section class="tracking-card"><h1>{{t('ticketUnavailable')}}</h1><p class="form-error" role="alert">{{error()}}</p><a class="button secondary" [href]="'/kiosk?lang='+i18n.language()">{{t('returnKiosk')}}</a></section>}
+  @if(ticket();as item){
+    <section class="tracking-card" aria-live="polite">
+      <div class="eyebrow">{{item.service}}</div><h1>{{item.ticketNumber}}</h1>
+      @if(item.status==='waiting'){<strong class="position">{{item.position}}</strong><p>{{t('position')}}</p><p>{{t('estimatedWait',{minutes:item.estimatedWaitMinutes,unit:t(item.estimatedWaitMinutes===1?'minute':'minutes')})}}</p><button class="button secondary" [disabled]="busy()" (click)="cancel()">{{t('cancelTicket')}}</button>}
+      @if(item.status==='called'){<h2>{{t('proceed',{desk:item.desk||t('serviceDesk')})}}</h2><p>{{t('called')}}</p>}
+      @if(item.status==='serving'){<h2>{{t('serving',{desk:item.desk||t('serviceDesk')})}}</h2>}
+      @if(item.status==='completed'){<h2>{{t('completed')}}</h2><p>{{t('thanks')}}</p>}
+      @if(item.status==='cancelled'){<h2>{{t('cancelled')}}</h2><p>{{t('notInQueue')}}</p>}
+      @if(item.status==='no_show'){<h2>{{t('noShow')}}</h2><p>{{t('askReception')}}</p>}
+      <small>{{t('updates')}}</small>
+    </section>
+  }
+</main>

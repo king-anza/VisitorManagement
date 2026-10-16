@@ -1,0 +1,8 @@
+{
+  "name": "visitor-management-system",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "npm.cmd --prefix client run build", "start": "npm.cmd run build && node server.js", "serve": "node server.js", "test": "node --test", "test:angular": "npm.cmd --prefix client test -- --watch=false", "test:browser": "node scripts/browser-smoke.js" },
+  "engines": { "node": ">=24.13.0" }
+}

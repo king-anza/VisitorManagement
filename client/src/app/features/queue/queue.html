@@ -1,0 +1,47 @@
+﻿<section class="page-heading">
+  <div><div class="eyebrow">QUEUE OPERATIONS</div><h1>Service queues</h1><p>Call, serve, transfer and complete visitors from one workspace.</p></div>
+  @if(admin()){<button class="button primary" (click)="openService()">＋ Add service</button>}
+</section>
+<div class="queue-toolbar">
+  <label>Your desk<input [formControl]="desk" maxlength="120"></label>
+  <a class="button secondary" href="/kiosk" target="_blank">Open kiosk</a>
+  <a class="button secondary" href="/join-queue" target="_blank">Open remote queue</a>
+  <a class="button secondary" href="/queue-display" target="_blank">Open display</a>
+</div>
+@if(notifications();as delivery){<div class="queue-toolbar notification-status"><strong>Mobile updates: {{delivery.configured?'connected':'not configured'}}</strong><span>{{delivery.pending}} pending · {{delivery.sent}} sent · {{delivery.failed}} failed</span>@if(delivery.failed&&canRetryNotifications()){<button class="button secondary" type="button" (click)="retryNotifications()">Retry failed</button>}</div>}
+@if(error()){<p class="form-error" role="alert">{{error()}}</p>}
+<section class="queue-stats">
+  @for(stat of stats();track stat.id){
+    <article class="stat">
+      <div class="stat-label">{{stat.name}}</div><strong>{{stat.waiting}}</strong>
+      <small>waiting · {{stat.breached}} over SLA · {{stat.completed}} completed · {{stat.noShow}} no-show</small>
+      <small>{{stat.averageWaitMinutes===null?'No wait data':(stat.averageWaitMinutes|number:'1.0-0')+' min wait'}} · {{stat.averageServiceMinutes===null?'No service data':(stat.averageServiceMinutes|number:'1.0-0')+' min service'}}</small>
+    </article>
+  }
+</section>
+<section class="queue-columns">
+  @for(service of services();track service.id){
+    <article class="queue-service" [class.inactive]="!service.active">
+      <header><div><h2>{{service.name}}</h2><p>{{service.description||'No description'}} · target {{service.estimatedMinutes}} min · SLA {{service.slaMinutes}} min</p>@if(!service.acceptingTickets){<p class="form-error">Paused: {{service.pausedReason}}</p>}</div><div class="row-actions"><button class="text-button" (click)="toggleAvailability(service)">{{service.acceptingTickets?'Pause':'Resume'}}</button>@if(admin()){<button class="text-button" (click)="openService(service)">Edit</button>}</div></header>
+      <div class="queue-actions"><strong>{{waiting(service.id).length}} / {{service.maxWaiting}} waiting</strong><button class="button primary" [disabled]="busy()||!waiting(service.id).length||!service.active" (click)="callNext(service)">Call next</button></div>
+      @for(ticket of active(service.id);track ticket.id){
+        <div class="active-ticket"><div><strong>{{ticket.ticketNumber}}</strong><span>{{ticket.name}}</span><small>{{ticket.status}} · {{ticket.desk}}</small></div><div class="row-actions">
+          @if(ticket.status==='called'){<button class="checkout" (click)="action(ticket,'recall')">Recall</button><button class="checkout" (click)="action(ticket,'start')">Start</button><button class="checkout" (click)="action(ticket,'no-show')">No-show</button>}
+          @if(ticket.status==='serving'){<button class="checkout" (click)="action(ticket,'complete')">Complete</button>}
+          <select aria-label="Transfer queue" (change)="transfer(ticket,$event)"><option value="">Transfer…</option>@for(target of services();track target.id){@if(target.active&&target.id!==ticket.serviceId){<option [value]="target.id">{{target.name}}</option>}}</select>
+        </div></div>
+      }
+      <div class="waiting-list">@for(ticket of waiting(service.id);track ticket.id){<div [class.sla-breach]="ticket.slaBreached"><b>{{ticket.ticketNumber}}</b><span>{{ticket.name}} <em class="source-badge">{{ticket.source==='remote'?'remote':'kiosk'}}</em></span><small>Waiting since {{ticket.checkedInAt|date:'shortTime'}} · estimate {{ticket.estimatedWaitMinutes}} min{{ticket.slaBreached?' · SLA exceeded':''}}{{ticket.priority?' · priority':''}}{{ticket.identificationLast4?' · ID ••••'+ticket.identificationLast4:''}}</small><button class="text-button" (click)="action(ticket,'cancel')">Cancel</button></div>}</div>
+    </article>
+  }
+</section>
+<section class="visitor-panel queue-report">
+  <div class="page-heading"><div><div class="eyebrow">QUEUE REPORT</div><h2>Service performance</h2></div><form [formGroup]="reportForm" (ngSubmit)="loadReport()" class="row-actions"><label>From<input type="date" formControlName="from"></label><label>To<input type="date" formControlName="to"></label><button class="button secondary" type="submit">Refresh report</button><button class="button secondary" type="button" (click)="exportReport()">Export CSV</button></form></div>
+  @if(report();as data){
+    <div class="outcome-stats" aria-label="Queue outcome summary"><article><span>Tickets</span><strong>{{data.summary.total}}</strong><small>{{data.summary.kiosk}} kiosk · {{data.summary.remote}} remote</small></article><article><span>Completed</span><strong>{{data.summary.completed}}</strong></article><article><span>Abandoned</span><strong>{{data.summary.abandoned}}</strong><small>{{data.summary.cancelled}} cancelled · {{data.summary.noShow}} no-show</small></article><article><span>Abandonment rate</span><strong>{{data.summary.abandonmentRate===null?'—':(data.summary.abandonmentRate|number:'1.0-1')+'%'}}</strong><small>of terminal outcomes</small></article></div>
+    @if(data.daily.length){<figure class="trend"><figcaption><strong>Daily ticket outcomes</strong><span>Completed and abandoned tickets by arrival date</span></figcaption><div class="trend-chart" role="img" [attr.aria-label]="'Daily queue trend for '+data.daily.length+' days'">@for(day of data.daily;track day.day){<div class="trend-day" [attr.aria-label]="day.day+': '+day.completed+' completed and '+day.abandoned+' abandoned'"><div class="trend-bars"><span class="trend-bar completed" [style.height.%]="trendHeight(day.completed)" title="Completed"></span><span class="trend-bar abandoned" [style.height.%]="trendHeight(day.abandoned)" title="Abandoned"></span></div><small>{{day.day|date:'MMM d'}}</small></div>}</div><div class="trend-legend"><span><i class="completed"></i>Completed</span><span><i class="abandoned"></i>Abandoned</span></div></figure>}
+    <div class="table-wrap"><table><thead><tr><th>Service</th><th>Tickets</th><th>Kiosk</th><th>Remote</th><th>Completed</th><th>Cancelled</th><th>No-show</th><th>Abandoned</th><th>Rate</th><th>Average wait</th><th>Average service</th></tr></thead><tbody>@for(item of data.services;track item.id){<tr><td>{{item.name}}</td><td>{{item.total}}</td><td>{{item.kiosk}}</td><td>{{item.remote}}</td><td>{{item.completed}}</td><td>{{item.cancelled}}</td><td>{{item.noShow}}</td><td>{{item.abandoned}}</td><td>{{item.abandonmentRate===null?'—':(item.abandonmentRate|number:'1.0-1')+'%'}}</td><td>{{item.averageWaitMinutes===null?'—':(item.averageWaitMinutes|number:'1.0-0')+' min'}}</td><td>{{item.averageServiceMinutes===null?'—':(item.averageServiceMinutes|number:'1.0-0')+' min'}}</td></tr>}</tbody></table></div>
+    @if(data.daily.length){<details class="trend-data"><summary>Daily trend data</summary><div class="table-wrap"><table><thead><tr><th>Date</th><th>Tickets</th><th>Kiosk</th><th>Remote</th><th>Completed</th><th>Cancelled</th><th>No-show</th><th>Abandoned</th><th>Rate</th></tr></thead><tbody>@for(day of data.daily;track day.day){<tr><td>{{day.day|date:'mediumDate'}}</td><td>{{day.total}}</td><td>{{day.kiosk}}</td><td>{{day.remote}}</td><td>{{day.completed}}</td><td>{{day.cancelled}}</td><td>{{day.noShow}}</td><td>{{day.abandoned}}</td><td>{{day.abandonmentRate===null?'—':(day.abandonmentRate|number:'1.0-1')+'%'}}</td></tr>}</tbody></table></div></details>}
+  }
+</section>
+<dialog #serviceDialog><form [formGroup]="serviceForm" (ngSubmit)="saveService()"><div class="dialog-heading"><div class="eyebrow">QUEUE CONFIGURATION</div><h2>{{selectedService()?'Edit service':'Add service'}}</h2><button type="button" class="close" (click)="serviceDialog.close()">×</button></div><div class="form-grid"><label>Service name *<input formControlName="name"></label><label>Ticket prefix *<input formControlName="prefix" maxlength="6"></label><label class="full">Description<textarea formControlName="description" maxlength="500"></textarea></label><label>Estimated service minutes<input formControlName="estimatedMinutes" type="number" min="1" max="480"></label><label>SLA waiting threshold (minutes)<input formControlName="slaMinutes" type="number" min="1" max="1440"></label><label>Maximum waiting tickets<input formControlName="maxWaiting" type="number" min="1" max="10000"></label><label>Status<select formControlName="active"><option [ngValue]="true">Active</option><option [ngValue]="false">Inactive</option></select></label><label class="check-label"><input formControlName="acceptingTickets" type="checkbox"> Accept new tickets</label><label class="check-label"><input formControlName="priorityEnabled" type="checkbox"> Allow priority assistance</label><label class="full">Paused message<textarea formControlName="pausedReason" maxlength="300"></textarea></label></div>@if(serviceForm.touched&&serviceForm.invalid){<p class="form-error">Complete the required service details.</p>}<div class="dialog-footer"><button class="button primary" type="submit" [disabled]="busy()">Save service</button></div></form></dialog>

@@ -1,0 +1,12 @@
+import { Component, computed, ElementRef, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Employee } from '../../core/models';import { Operations } from '../../core/operations';import { Session } from '../../core/session';
+@Component({selector:'app-employees',standalone:true,imports:[ReactiveFormsModule],templateUrl:'./employees.html',styleUrl:'./employees.css'})
+export class Employees implements OnInit {
+ private readonly api=inject(Operations);private readonly fb=inject(FormBuilder);readonly session=inject(Session);@ViewChild('dialog')dialog?:ElementRef<HTMLDialogElement>;readonly items=signal<Employee[]>([]);readonly query=signal('');readonly selected=signal<Employee|null>(null);readonly error=signal('');readonly busy=signal(false);readonly filtered=computed(()=>{const q=this.query().toLowerCase();return this.items().filter(item=>`${item.name} ${item.email} ${item.department} ${item.location}`.toLowerCase().includes(q));});readonly canEdit=computed(()=>['admin','receptionist'].includes(this.session.user()?.role||''));
+ readonly form=this.fb.nonNullable.group({name:['',[Validators.required,Validators.maxLength(120)]],department:['',[Validators.maxLength(120)]],email:['',[Validators.email,Validators.maxLength(120)]],phone:['',[Validators.maxLength(120)]],location:['',[Validators.maxLength(120)]],active:[true]});
+ ngOnInit():void{void this.load();}async load():Promise<void>{try{this.items.set(await this.api.employees());}catch(e){this.fail(e);}}
+ open(item:Employee|null=null):void{this.selected.set(item);this.error.set('');this.form.reset({name:item?.name||'',department:item?.department||'',email:item?.email||'',phone:item?.phone||'',location:item?.location||'',active:item?!!item.active:true});queueMicrotask(()=>this.dialog?.nativeElement.showModal());}
+ async save():Promise<void>{if(this.form.invalid){this.form.markAllAsTouched();return;}this.busy.set(true);this.error.set('');try{const item=this.selected(),payload:Record<string,unknown>={...this.form.getRawValue()};if(item)payload['version']=item.version;await this.api.saveEmployee(payload,item?.id);this.dialog?.nativeElement.close();await this.load();}catch(e){this.fail(e);}finally{this.busy.set(false);}}
+ private fail(e:unknown):void{const value=e as {error?:{error?:string},message?:string};this.error.set(value?.error?.error||value?.message||'Unable to save employee.');}
+}
